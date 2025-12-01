@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'screens/sign_language_screen.dart';
+import 'screens/splash_screen.dart';
 
 late List<CameraDescription> cameras;
 
@@ -20,7 +20,7 @@ class SignLanguageApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.black,
         colorScheme: ColorScheme.dark(primary: Colors.blue),
       ),
-      home: SignLanguageScreen(),
+      home: SplashScreen(), // 👈 Splash first
       debugShowCheckedModeBanner: false,
     );
   }
