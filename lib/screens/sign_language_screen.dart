@@ -6,6 +6,7 @@ import '../services/hand_detector.dart';
 import '../services/gesture_predictor.dart';
 import '../services/tts_service.dart';
 import '../main.dart';
+import 'dart:ui';
 
 class SignLanguageScreen extends StatefulWidget {
   @override
@@ -23,6 +24,7 @@ class _SignLanguageScreenState extends State<SignLanguageScreen> {
   bool _isProcessing = false;
   bool _isInitialized = false;
   String _statusMessage = 'Initializing...';
+  String _spokenText = "";
 
   List<String> _predictionHistory = [];
   final int _stabilityFrames = 7;
@@ -196,7 +198,38 @@ class _SignLanguageScreenState extends State<SignLanguageScreen> {
       _ttsService!.speak(gesture);
       _lastSpoken = gesture;
       _lastSpeakTime = now;
+
+      // Append to readable text
+      setState(() {
+        _spokenText += " $gesture";
+      });
     }
+  }
+
+  void _switchCamera() async {
+    final lensDirection = _cameraController!.description.lensDirection;
+
+    final newDescription = cameras.firstWhere(
+      (camera) =>
+          camera.lensDirection ==
+          (lensDirection == CameraLensDirection.front
+              ? CameraLensDirection.back
+              : CameraLensDirection.front),
+    );
+
+    await _cameraController!.dispose();
+
+    _cameraController = CameraController(
+      newDescription,
+      ResolutionPreset.medium,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.yuv420,
+    );
+
+    await _cameraController!.initialize();
+    _cameraController!.startImageStream(_processImage);
+
+    setState(() {});
   }
 
   @override
@@ -221,30 +254,32 @@ class _SignLanguageScreenState extends State<SignLanguageScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Sign Language to Voice'),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                'FPS: ${(_detectionCount / (_frameCount / 30)).toStringAsFixed(1)}',
-                style: TextStyle(fontSize: 12),
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // CAMERA PREVIEW
+          SizedBox.expand(child: CameraPreview(_cameraController!)),
+
+          // SWITCH CAMERA BUTTON (top-right)
+          Positioned(
+            top: 20,
+            right: 20,
+            child: GestureDetector(
+              onTap: _switchCamera,
+              child: Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.cameraswitch, color: Colors.white, size: 30),
               ),
             ),
           ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Camera preview
-          SizedBox.expand(child: CameraPreview(_cameraController!)),
 
-          // Gesture display overlay
+          // GESTURE BOX (same as before)
           Positioned(
-            top: 20,
+            top: 80,
             left: 20,
             right: 20,
             child: Container(
@@ -294,9 +329,9 @@ class _SignLanguageScreenState extends State<SignLanguageScreen> {
             ),
           ),
 
-          // Debug info
+          // DEBUG INFO (unchanged)
           Positioned(
-            top: 160,
+            top: 20,
             left: 20,
             child: Container(
               padding: EdgeInsets.all(8),
@@ -320,30 +355,32 @@ class _SignLanguageScreenState extends State<SignLanguageScreen> {
             ),
           ),
 
-          // Instructions
+          // BOTTOM TEXT BAR (NEW)
           Positioned(
-            bottom: 40,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.pan_tool, color: Colors.white70, size: 20),
-                  SizedBox(width: 10),
-                  Flexible(
+            left: 0,
+            right: 0,
+            bottom: 50,
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  height: 100, // adjustable
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  color: Colors.black.withOpacity(0.25),
+                  child: SingleChildScrollView(
+                    reverse: true, // always scroll to bottom
                     child: Text(
-                      'Show hand gesture clearly to camera',
+                      _spokenText.trim(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
