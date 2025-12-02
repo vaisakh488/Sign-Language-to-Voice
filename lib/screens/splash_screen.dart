@@ -110,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         SizedBox(height: 8),
                         Text(
-                          "Interpreter",
+                          "Asistive Communication",
                           style: TextStyle(fontSize: 18, color: Colors.white70),
                         ),
                       ],
